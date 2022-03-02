@@ -270,7 +270,7 @@ async function checkBatterie () {
         else {
             setState(watchdogLog, "Batterien der Geräte in Ordnung");
         }
-        }
+    }
 
 }
 
@@ -292,8 +292,8 @@ setTimeout (async function () {
 //Script überprüft an vordefinierten Zeitpunkten den Batteriestand der Geräte und macht entsprechend Meldung, wenn der Batteriestatus unter x% fällt
 // Hinweis: 
 // Dies passiert 3x pro Woche
-if (sendBatterieMsg) {
     schedule('{"time":{"exactTime":true,"start":"12:50"},"period":{"days":1,"dows":"[2,4,6]"}}', async function () {
-    checkBatterie();
+        if (sendBatterieMsg) {
+            await checkBatterie();
+        }
     })
-}
