@@ -4,6 +4,8 @@
 **
 */
 
+const watchDogVersion = '0.0.2';
+
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
 
