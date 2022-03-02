@@ -1,7 +1,9 @@
 /* 
 ** Watchdog **
 ** Skript um Geräte zu Überwachen ob diese noch erreichbar sind und wie der aktuelle Batteriestand ist.
-**
+** Github Link: https://github.com/ciddi89/ioBroker_device_watchdog
+** ioBroker Topiclink: https://forum.iobroker.net/topic/52108/zigbee-geräte-überwachen
+** Thanks to JohannesA for the first work and great idea!
 */
 
 const watchDogVersion = '0.0.2';
