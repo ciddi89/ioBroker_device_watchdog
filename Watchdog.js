@@ -37,7 +37,7 @@ const sendOfflineMsg = true;
 //Welche Geräte sollen überwacht werden?
 const watchZigbee       = true;     //Zigbee Adapter
 const watchBle          = true;     //Ble Adapter z.B. MiFlora Sensoren
-const watchMqttXiaomi   = false;    // MQTT Xiaomi
+const watchMqttXiaomi   = false;    // MQTT Xiaomi Antenna
 
 
 /*****************************************************************
