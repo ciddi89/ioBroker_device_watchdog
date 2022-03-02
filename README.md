@@ -1,5 +1,8 @@
 # ioBroker_device_watchdog
-### Javascript for ioBroker to watch devices if there are alive
+#### Javascript for ioBroker to watch devices if there are alive
+The Script generates states with arrays and counts of devices which are offline, using batteries, total devices of these and how much the signal strength is.
+In the first place it's meant for zigbee devices which are connected with the Zigbee Adapter and works perfectly with it.
+All other Devices (currently Ble, MQTT Xiaomi Antennas) are in beta.
 The Script can have bugs and isn't perfect. So feel free to open an issue if you found something or if you've an improvement suggestion.
 
 ## Changelog:
