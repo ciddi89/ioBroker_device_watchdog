@@ -1,0 +1,294 @@
+/* 
+** Watchdog **
+** Skript um Geräte zu Überwachen ob diese noch erreichbar sind und wie der aktuelle Batteriestand ist.
+**
+*/
+
+//Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
+const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
+
+//Für Telegram Benachrichtigung
+const sendTelegram = false;                 //Soll per Telegram eine Nachricht gesendet werden? true = Ja / false = Nein
+const userTelegram = '';                    //leer lassen falls jeder User eine Nachricht bekommen soll.
+
+//Für Pushover Benachrichtigung
+const sendPushover      = true;             //Soll per Pushover eine Nachricht gesendet werden? true = Ja / false = Nein
+const devicePushover    = 'All';
+const titelPushover     = 'ioBroker Watchdog';
+
+//Für Jarvis Notification
+const sendJarvis    = false;                //Soll per Jarvis Notifications eine Nachricht gesendet werden? true = Ja / false = Nein
+const titleJarvis   = 'WatchDog-Script'
+
+//Soll eine Meldung erfolgen falls der Batteriestand der Geräte gering ist? Hinweis: Die Meldung kommt 3x in einer Woche als Auflistung!
+const sendBatterieMsg = true;
+
+//Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
+const sendBatterieMsgAtStart = true;
+
+//Ab wieviel % Restbatterie soll eine Meldung erfolgen?
+const batteryWarningMin = 75;
+
+//Soll eine Meldung erfolgen falls die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung höher ist?
+const sendOfflineMsg = true;
+
+//Welche Geräte sollen überwacht werden?
+const watchZigbee       = true;     //Zigbee Adapter
+const watchBle          = true;     //Ble Adapter z.B. MiFlora Sensoren
+const watchMqttXiaomi   = false;    // MQTT Xiaomi
+
+
+/*****************************************************************
+**
+** Ab hier bitte nichts mehr ändern! Außer man weiß was man tut!
+**
+******************************************************************/
+
+//Pfad der einzelenden Datenpunkte
+const stateDevicesCount             = basePath + "devices_count_all";
+const stateDevicesLinkQuality       = basePath + "devices_link_quality_list";
+const stateDevicesOfflineCount      = basePath + "devices_offline_count";
+const stateDevicesOffline           = basePath + "devices_offline_list";
+const stateDevicesWithBatteryCount  = basePath + "devices_battery_count";
+const stateDevicesWithBattery       = basePath + "devices_battery_list";
+const stateDevicesInfoList          = basePath + "devices_list_all";
+const stateDevicesLastCheck         = basePath + "lastCheck";
+const watchdogLog                   = basePath + "watchdogLog";
+
+//Funktion zur Erstellung der Datenpunkte
+async function doStates(){
+
+    if (!(await existsStateAsync(stateDevicesCount))) await createStateAsync(stateDevicesCount, 0, { read: true, write: true, desc: "Anzahl Geräte gesamt", name: "Anzahl Geräte gesamt",type: 'number' });
+    if (!(await existsStateAsync(stateDevicesLinkQuality))) await createStateAsync(stateDevicesLinkQuality, "", { read: true, write: true, desc: "Liste Geräte Signalstärke", name: "Liste Geräte Signalstärke", type: 'string' });
+    if (!(await existsStateAsync(stateDevicesOfflineCount))) await createStateAsync(stateDevicesOfflineCount, 0, { read: true, write: true, desc: "Anzahl Geräte offline", name: "Anzahl Geräte offline",type: 'number' });
+    if (!(await existsStateAsync(stateDevicesOffline))) await createStateAsync(stateDevicesOffline, "", { read: true, write: true, desc: "Liste Geräte offline", name: "Liste Geräte offline",type: 'string' });
+    if (!(await existsStateAsync(stateDevicesWithBattery))) await createStateAsync(stateDevicesWithBattery, "", {read: true, write: true, desc: "Liste Geräte mit Batterie", name: "Liste Geräte mit Batterie", type: 'string'});
+    if (!(await existsStateAsync(stateDevicesWithBatteryCount))) await createStateAsync(stateDevicesWithBatteryCount, 0, {read: true, write: true, desc: "Anzahl Geräte mit Batterie", name: "Anzahl Geräte mit Batterie", type: 'number'});
+    if (!(await existsStateAsync(stateDevicesInfoList))) await createStateAsync(stateDevicesInfoList, "", {read: true, write: true, desc: "Liste aller Geräte", name: "Liste aller Geräte", type: 'string'}); 
+    if (!(await existsStateAsync(stateDevicesLastCheck))) await createStateAsync(stateDevicesLastCheck, "", {read: true, write: true, desc: "Zeitpunkt letzter Überprüfung", name: "Zeitpunkt letzter Überprüfung", type: 'string'});
+    if (!(await existsStateAsync(watchdogLog))) await createStateAsync(watchdogLog, "", {read: true, write: true, desc: "Log vom Device Watchdog", name: "Device Watchdog Log", type: 'string'});
+
+}
+ 
+//Die Mainfunction.
+function deviceWatchdog() {
+ 
+    let maxMinutes              = 300; // "Gerät offline" - Wert in Minuten: Gilt erst, wenn Gerät länger als X Minuten keine Meldung gesendet hat 
+    let arrOfflineDevices       = []; //JSON-Info alle offline-Geräte
+    let arrLinkQualityDevices   = []; //JSON-Info alle offline-Geräte
+    let arrBatteryPowered       = []; //JSON-Info alle batteriebetriebenen Geräte
+    let arrListAllDevices       = []; //JSON-Info Gesamtliste mit Info je Gerät
+    let currDeviceString;
+    let currDeviceBatteryString;
+    let currRoom;
+    let deviceName;
+    let linkQuality;
+    let lastContact;
+    let lastContactString;
+    let offlineDevicesCount;
+    let deviceCounter           = 0;
+    let batteryPoweredCount     = 0;
+    let batteryHealth;
+    let adapterName;
+ 
+
+    const myArrBlacklist=[]
+    const myArrDev=[
+                    {"theSelektor":"zigbee.0.*.link_quality","theName":"common","linkQual":"zigbee","batt":"zigbee"},
+                    {"theSelektor":"ble.0.*.rssi","theName":"common","linkQual":"ble","batt":"none"},
+
+                    //{"theSelektor":"mqtt.0.xiaomiantenna.*.status","theName":"Objectname2Level","linkQual":"none","batt":"none"},
+                    //{"theSelektor":"mqtt.0.xiaomiantenna.sensors.sensor.*_batt.state","theName":"Objectname1Level","linkQual":"none","batt":"dpvalue"},
+                    ]
+
+    for(let x=0; x<myArrDev.length;x++){
+ 
+        var device = $(myArrDev[x].theSelektor);
+ 
+        device.each(function (id, i) {
+    
+            currDeviceString = id.slice(0, (id.lastIndexOf('.') + 1) - 1);
+            adapterName = getObject(currDeviceString)._id[0].toUpperCase() + getObject(currDeviceString)._id.slice(1, (id.indexOf('.') + 1) - 1);
+
+            //hier braucht man eine function, die den hostnamen findet:
+            if (myArrDev[x].theName=="common")  deviceName=getObject(currDeviceString).common.name
+            if (myArrDev[x].theName=="dp") {
+                                        let ida=id.split('.');
+                                        let mySelect=$(ida[0]+'.'+ida[1]+'.'+ida[2]+'.*');
+                                        mySelect.each(function (ad, i) {
+                                            if (ad.includes(myArrDev[x].thedpName)) deviceName=getState(ad).val
+                                        });
+                                        }
+
+            currRoom = getObject(id, 'rooms').enumNames[0];
+            if(typeof currRoom == 'object') currRoom = currRoom.de;
+                                        
+    
+            // 1. Link-Qualität des Gerätes ermitteln
+            //---------------------------------------
+            linkQuality=parseFloat((100/255 * getState(id).val).toFixed(2)) + "%"; // Linkqualität in % verwenden
+            //linkQuality=getState(id).val; // ALTERNATIV: Echt-Wert der Linkqualität (0-255) verwenden
+            
+            arrLinkQualityDevices.push({device: deviceName, adapter: adapterName, room: currRoom, link_quality: linkQuality})
+    
+            // 2. Wann bestand letzter Kontakt zum Gerät
+            //------------------------      
+            lastContact = Math.round((new Date() - new Date(getState(id).ts)) / 1000 / 60);
+            // 2b. wenn seit X Minuten kein Kontakt mehr besteht, nimm Gerät in Liste auf
+            //Rechne auf Tage um, wenn mehr als 48 Stunden seit letztem Kontakt vergangen sind
+            lastContactString=Math.round(lastContact) + " Minuten";
+            if (Math.round(lastContact) > 100) {
+                lastContactString=Math.round(lastContact/60) + " Stunden";
+            } 
+            if (Math.round(lastContact/60) > 48) {
+                lastContactString=Math.round(lastContact/60/24) + " Tagen";
+            } 
+            if ( lastContact > maxMinutes) {
+                arrOfflineDevices.push({device: deviceName, adapter: adapterName, room: currRoom, lastContact: lastContactString});
+            }
+    
+            // 3. Batteriestatus abfragen
+            currDeviceBatteryString=currDeviceString+".battery";
+            if (existsState(currDeviceBatteryString)) {
+                batteryHealth=getState(currDeviceBatteryString).val + "%"; // Batteriestatus in %
+                arrBatteryPowered.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth});
+            } else batteryHealth="-";
+        
+        arrListAllDevices.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth, lastContact: lastContactString, link_quality: linkQuality});
+    
+        });
+    
+    
+        // 1b. Zähle, wie viele Geräte existieren
+        //---------------------------------------------       
+        deviceCounter=arrLinkQualityDevices.length;
+            //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
+            if (deviceCounter == 0) { 
+                arrLinkQualityDevices.push({device: "--keine--", room: "", link_quality: ""})
+                arrListAllDevices.push({device: "--keine--", room: "", battery: "", lastContact: "", link_quality: ""});
+            }
+    
+        // 2c. Wie viele Geräte sind offline?
+        //------------------------   
+        offlineDevicesCount=arrOfflineDevices.length;
+            //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
+            if (offlineDevicesCount == 0) { 
+                arrOfflineDevices.push({device: "--keine--", room: "", lastContact: ""})
+            }
+    
+        // 3c. Wie viele Geräte sind batteriebetrieben?
+        //------------------------   
+        batteryPoweredCount=arrBatteryPowered.length;
+            //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
+            if (batteryPoweredCount == 0) { 
+                arrBatteryPowered.push({device: "--keine--", room: "", battery: ""})
+            }
+    
+        // SETZE STATES
+        setState(stateDevicesCount, deviceCounter);
+        setState(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevices));
+        setState(stateDevicesOfflineCount, offlineDevicesCount);
+        setState(stateDevicesOffline, JSON.stringify(arrOfflineDevices));
+        setState(stateDevicesWithBatteryCount, batteryPoweredCount);
+        setState(stateDevicesWithBattery, JSON.stringify(arrBatteryPowered));
+        setState(stateDevicesInfoList, JSON.stringify(arrListAllDevices));
+        setState(stateDevicesLastCheck, [formatDate(new Date(), "DD.MM.YYYY"),' - ',formatDate(new Date(), "hh:mm:ss")].join(''));
+
+        // Sende Benachrichtigungen falls sich die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung erhöht hat.
+        if (sendOfflineMsg) {
+            let offlineDevicesCountOld = getState(stateDevicesOfflineCount).val;
+            if (offlineDevicesCount > offlineDevicesCountOld) {
+                let infotext = "Folgende " + offlineDevicesCount + " Geräte sind seit einiger Zeit nicht erreichbar: \n";
+                for (const id of arrOfflineDevices) {
+                    infotext = infotext + "\n" + id["device"] + " " + id["room"] + " (" + id["lastContact"] + ")";
+                }
+                log(infotext);
+                setState(watchdogLog, infotext);
+                if (sendJarvis) {
+                setState("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + offlineDevicesCount + ' Geräte sind nicht erreichbar","display": "drawer"}');
+                };
+                if (sendPushover) {
+                    pushover("Batteriezustand: " + infotext)
+                }
+                if (sendTelegram) {
+                    telegram("Batteriezustand: " + infotext)
+                }
+            }
+        }
+}}
+
+//Telegram function
+async function telegram (msg) {
+    sendTo('telegram', { 
+        text: msg,
+        user: userTelegram,
+        parse_mode: 'HTML'
+    }); 
+}
+
+//Pushover function
+async function pushover (msg) {
+    sendTo("pushover", {
+        title: titelPushover,
+        message: msg,
+        device: devicePushover
+    })
+}
+
+async function checkBatterie () {
+    if (sendBatterieMsg) {
+        let weakCount = 0;
+        let batteryData = JSON.parse(getState(stateDevicesWithBattery).val);
+        let infotext = "Status Batterien: \n";
+        for (const id of batteryData) {
+            let batteryValue = id["battery"].replace("%", "");
+            if (batteryValue < batteryWarningMin) {
+                infotext = infotext + "\n" + id["device"] + " " + id["room"] + " (" + id["battery"] + ")";
+                ++weakCount;
+            }
+        }
+
+        if (weakCount > 0) {
+            log("Batteriezustand: " + infotext);
+            setState(watchdogLog, infotext);
+            if (sendJarvis) {
+                setState("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + weakCount + ' Geräte mit schwacher Batterie","display": "drawer"}'); 
+            };
+            if (sendPushover) {
+                pushover("Batteriezustand: " + infotext)
+            }
+            if (sendTelegram) {
+                telegram("Batteriezustand: " + infotext)
+            }
+
+        } 
+        else {
+            setState(watchdogLog, "Batterien der Geräte in Ordnung");
+        }
+        }
+
+}
+
+//Das Skript wird nach jeder vollen Stunde in der 6 minute ausgeführt
+schedule("6 */1 * * *", async function () {
+    log("Run Device-Watchdog");
+    await doStates().then(deviceWatchdog);
+});
+
+//Das Skript wird einmal nach Skriptstart ausgeführt
+setTimeout (async function () {
+    log("Run Device-Watchdog");
+    await doStates().then(deviceWatchdog);
+    if (sendBatterieMsgAtStart) {
+        await checkBatterie()
+    }
+}, 300);
+
+//Script überprüft an vordefinierten Zeitpunkten den Batteriestand der Geräte und macht entsprechend Meldung, wenn der Batteriestatus unter x% fällt
+// Hinweis: 
+// Dies passiert 3x pro Woche
+if (sendBatterieMsg) {
+    schedule('{"time":{"exactTime":true,"start":"12:50"},"period":{"days":1,"dows":"[2,4,6]"}}', async function () {
+    checkBatterie();
+    })
+}
