@@ -26,7 +26,7 @@ const titleJarvis   = 'WatchDog-Script'
 const sendBatterieMsg = true;
 
 //Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
-const sendBatterieMsgAtStart = true;
+const sendBatterieMsgAtStart = false;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
 const batteryWarningMin = 75;
@@ -92,16 +92,19 @@ function deviceWatchdog() {
     let batteryPoweredCount     = 0;
     let batteryHealth;
     let adapterName;
+    const myArrDev              = [];
+    const myArrBlacklist        = [];
  
-
-    const myArrBlacklist=[]
-    const myArrDev=[
-                    {"theSelektor":"zigbee.0.*.link_quality","theName":"common","linkQual":"zigbee","batt":"zigbee"},
-                    {"theSelektor":"ble.0.*.rssi","theName":"common","linkQual":"ble","batt":"none"},
-
-                    //{"theSelektor":"mqtt.0.xiaomiantenna.*.status","theName":"Objectname2Level","linkQual":"none","batt":"none"},
-                    //{"theSelektor":"mqtt.0.xiaomiantenna.sensors.sensor.*_batt.state","theName":"Objectname1Level","linkQual":"none","batt":"dpvalue"},
-                    ]
+    if (watchZigbee) {
+        myArrDev.push({"theSelektor":"zigbee.0.*.link_quality","theName":"common","linkQual":"zigbee","batt":"zigbee"})
+    }
+    if (watchBle) {
+        myArrDev.push({"theSelektor":"ble.0.*.rssi","theName":"common","linkQual":"ble","batt":"none"})
+    }
+    if (watchMqttXiaomi) {
+        myArrDev.push({"theSelektor":"mqtt.0.xiaomiantenna.*.status","theName":"Objectname2Level","linkQual":"none","batt":"none"})
+        myArrDev.push({"theSelektor":"mqtt.0.xiaomiantenna.sensors.sensor.*_batt.state","theName":"Objectname1Level","linkQual":"none","batt":"dpvalue"})
+    }
 
     for(let x=0; x<myArrDev.length;x++){
  
