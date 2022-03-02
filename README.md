@@ -15,5 +15,6 @@ Version 0.0.2:
 - changed the script to get states from ble adapter and mqtt xiaomi antennas too
 - added function to get messages in telegram, pushover and Jarvis Notifications
 - added shedule to send three days per week a notification with low battery devices
+- added function to choose which devices should be watch
 - cleaned up the script
 - added comments
