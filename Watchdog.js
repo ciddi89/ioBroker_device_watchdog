@@ -219,7 +219,7 @@ async function deviceWatchdog() {
                     infotext = infotext + "\n" + id["device"] + " " + id["room"] + " (" + id["lastContact"] + ")";
                 };
                 log(infotext);
-                setState(watchdogLog, infotext);
+                await setStateAsync(watchdogLog, infotext);
                 if (sendJarvis) {
                 await setStateAsync("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + offlineDevicesCount + ' Geräte sind nicht erreichbar","display": "drawer"}');
                 };
@@ -266,9 +266,9 @@ async function checkBatterie () {
 
         if (weakCount > 0) {
             log("Batteriezustand: " + infotext);
-            setState(watchdogLog, infotext);
+            await setStateAsync(watchdogLog, infotext);
             if (sendJarvis) {
-                setState("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + weakCount + ' Geräte mit schwacher Batterie","display": "drawer"}'); 
+                await setStateAsync("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + weakCount + ' Geräte mit schwacher Batterie","display": "drawer"}'); 
             };
             if (sendPushover) {
                 pushover("Batteriezustand: " + infotext)
@@ -279,7 +279,7 @@ async function checkBatterie () {
 
         } 
         else {
-            setState(watchdogLog, "Batterien der Geräte in Ordnung");
+            await setStateAsync(watchdogLog, "Batterien der Geräte in Ordnung");
         }
     }
 
