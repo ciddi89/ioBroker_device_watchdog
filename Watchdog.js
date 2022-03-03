@@ -37,6 +37,10 @@ const batteryWarningMin = 75;
 //Soll eine Meldung erfolgen falls die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung höher ist?
 const sendOfflineMsg = true;
 
+// "Gerät offline" - Wert in Minuten: Gilt erst, wenn Gerät länger als X Minuten keine Meldung gesendet hat 
+const maxMinutes = 300;
+
+
 //Welche Geräte sollen überwacht werden?
 const watchZigbee       = true;     // Zigbee Adapter
 const watchBle          = true;     // Ble Adapter z.B. MiFlora Sensoren
@@ -80,23 +84,11 @@ async function doStates() {
 //Die Mainfunction.
 async function deviceWatchdog() {
  
-    let maxMinutes              = 300; // "Gerät offline" - Wert in Minuten: Gilt erst, wenn Gerät länger als X Minuten keine Meldung gesendet hat 
     let arrOfflineDevices       = []; //JSON-Info alle offline-Geräte
     let arrLinkQualityDevices   = []; //JSON-Info alle offline-Geräte
     let arrBatteryPowered       = []; //JSON-Info alle batteriebetriebenen Geräte
     let arrListAllDevices       = []; //JSON-Info Gesamtliste mit Info je Gerät
-    let currDeviceString;
-    let currDeviceBatteryString;
-    let currRoom;
-    let deviceName;
-    let linkQuality;
-    let lastContact;
-    let lastContactString;
-    let offlineDevicesCount;
-    let deviceCounter           = 0;
-    let batteryPoweredCount     = 0;
-    let batteryHealth;
-    let adapterName;
+    
     const myArrDev              = [];
     const myArrBlacklist        = [];
  
@@ -117,10 +109,11 @@ async function deviceWatchdog() {
  
         device.each(function (id, i) {
     
-            currDeviceString = id.slice(0, (id.lastIndexOf('.') + 1) - 1);
-            adapterName = getObject(currDeviceString)._id[0].toUpperCase() + getObject(currDeviceString)._id.slice(1, (id.indexOf('.') + 1) - 1);
+            let currDeviceString    = id.slice(0, (id.lastIndexOf('.') + 1) - 1);
+            let adapterName         = getObject(currDeviceString)._id[0].toUpperCase() + getObject(currDeviceString)._id.slice(1, (id.indexOf('.') + 1) - 1);
 
             //hier braucht man eine function, die den hostnamen findet:
+            let deviceName;
             if (myArrDev[x].theName=="common")  deviceName=getObject(currDeviceString).common.name
             if (myArrDev[x].theName=="dp") {
                                         let ida=id.split('.');
@@ -130,13 +123,13 @@ async function deviceWatchdog() {
                                         });
                                         }
 
-            currRoom = getObject(id, 'rooms').enumNames[0];
+            let currRoom = getObject(id, 'rooms').enumNames[0];
             if(typeof currRoom == 'object') currRoom = currRoom.de;
                                         
     
             // 1. Link-Qualität des Gerätes ermitteln
             //---------------------------------------
-            linkQuality = "";
+            let linkQuality;
             if (trueLinkQuality) {
                 linkQuality = getState(id).val;
             } 
@@ -152,10 +145,10 @@ async function deviceWatchdog() {
     
             // 2. Wann bestand letzter Kontakt zum Gerät
             //------------------------      
-            lastContact = Math.round((new Date() - new Date(getState(id).ts)) / 1000 / 60);
+            let lastContact = Math.round((new Date() - new Date(getState(id).ts)) / 1000 / 60);
             // 2b. wenn seit X Minuten kein Kontakt mehr besteht, nimm Gerät in Liste auf
             //Rechne auf Tage um, wenn mehr als 48 Stunden seit letztem Kontakt vergangen sind
-            lastContactString=Math.round(lastContact) + " Minuten";
+            let lastContactString=Math.round(lastContact) + " Minuten";
             if (Math.round(lastContact) > 100) {
                 lastContactString=Math.round(lastContact/60) + " Stunden";
             } 
@@ -167,7 +160,8 @@ async function deviceWatchdog() {
             }
     
             // 3. Batteriestatus abfragen
-            currDeviceBatteryString = currDeviceString + ".battery";
+            let batteryHealth;
+            let currDeviceBatteryString = currDeviceString + ".battery";
             if (existsState(currDeviceBatteryString)) {
                 batteryHealth = getState(currDeviceBatteryString).val + "%"; // Batteriestatus in %
                 arrBatteryPowered.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth});
@@ -183,7 +177,7 @@ async function deviceWatchdog() {
     
         // 1b. Zähle, wie viele Geräte existieren
         //---------------------------------------------       
-        deviceCounter = arrLinkQualityDevices.length;
+        let deviceCounter = arrLinkQualityDevices.length;
             //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
             if (deviceCounter == 0) { 
                 arrLinkQualityDevices.push({device: "--keine--", room: "", link_quality: ""})
@@ -192,7 +186,7 @@ async function deviceWatchdog() {
     
         // 2c. Wie viele Geräte sind offline?
         //------------------------   
-        offlineDevicesCount = arrOfflineDevices.length;
+        let offlineDevicesCount = arrOfflineDevices.length;
             //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
             if (offlineDevicesCount == 0) { 
                 arrOfflineDevices.push({device: "--keine--", room: "", lastContact: ""})
@@ -200,7 +194,7 @@ async function deviceWatchdog() {
     
         // 3c. Wie viele Geräte sind batteriebetrieben?
         //------------------------   
-        batteryPoweredCount = arrBatteryPowered.length;
+        let batteryPoweredCount = arrBatteryPowered.length;
             //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
             if (batteryPoweredCount == 0) { 
                 arrBatteryPowered.push({device: "--keine--", room: "", battery: ""})
@@ -218,7 +212,7 @@ async function deviceWatchdog() {
 
         // Sende Benachrichtigungen falls sich die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung erhöht hat.
         if (sendOfflineMsg) {
-            let infotext = "";
+            let infotext
             let offlineDevicesCountOld = getState(stateDevicesOfflineCount).val;
             if (offlineDevicesCount > offlineDevicesCountOld) {
                 if (offlineDevicesCount == 1) {
