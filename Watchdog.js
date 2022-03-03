@@ -29,7 +29,7 @@ const titleJarvis   = 'WatchDog-Script'
 const sendBatterieMsg = true;
 
 //Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
-const sendBatterieMsgAtStart = false;
+const sendBatterieMsgAtStart = true;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
 const batteryWarningMin = 75;
@@ -61,7 +61,7 @@ const stateDevicesLastCheck         = basePath + "lastCheck";
 const watchdogLog                   = basePath + "watchdogLog";
 
 //Funktion zur Erstellung der Datenpunkte
-async function doStates(){
+async function doStates() {
 
     if (!(await existsStateAsync(stateDevicesCount))) await createStateAsync(stateDevicesCount, 0, { read: true, write: true, desc: "Anzahl Geräte gesamt", name: "Anzahl Geräte gesamt",type: 'number' });
     if (!(await existsStateAsync(stateDevicesLinkQuality))) await createStateAsync(stateDevicesLinkQuality, "", { read: true, write: true, desc: "Liste Geräte Signalstärke", name: "Liste Geräte Signalstärke", type: 'string' });
@@ -76,7 +76,7 @@ async function doStates(){
 }
  
 //Die Mainfunction.
-function deviceWatchdog() {
+async function deviceWatchdog() {
  
     let maxMinutes              = 300; // "Gerät offline" - Wert in Minuten: Gilt erst, wenn Gerät länger als X Minuten keine Meldung gesendet hat 
     let arrOfflineDevices       = []; //JSON-Info alle offline-Geräte
@@ -109,7 +109,7 @@ function deviceWatchdog() {
         myArrDev.push({"theSelektor":"mqtt.0.xiaomiantenna.sensors.sensor.*_batt.state","theName":"Objectname1Level","linkQual":"none","batt":"dpvalue"})
     }
 
-    for(let x=0; x<myArrDev.length;x++){
+    for(let x=0; x<myArrDev.length;x++) {
  
         var device = $(myArrDev[x].theSelektor);
  
@@ -151,25 +151,28 @@ function deviceWatchdog() {
             if (Math.round(lastContact/60) > 48) {
                 lastContactString=Math.round(lastContact/60/24) + " Tagen";
             } 
-            if ( lastContact > maxMinutes) {
+            if (lastContact > maxMinutes) {
                 arrOfflineDevices.push({device: deviceName, adapter: adapterName, room: currRoom, lastContact: lastContactString});
             }
     
             // 3. Batteriestatus abfragen
-            currDeviceBatteryString=currDeviceString+".battery";
+            currDeviceBatteryString = currDeviceString + ".battery";
             if (existsState(currDeviceBatteryString)) {
-                batteryHealth=getState(currDeviceBatteryString).val + "%"; // Batteriestatus in %
+                batteryHealth = getState(currDeviceBatteryString).val + "%"; // Batteriestatus in %
                 arrBatteryPowered.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth});
-            } else batteryHealth="-";
+            } 
+            else {
+                batteryHealth = "-";
+            }
         
-        arrListAllDevices.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth, lastContact: lastContactString, link_quality: linkQuality});
+            arrListAllDevices.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth, lastContact: lastContactString, link_quality: linkQuality});
     
         });
     
     
         // 1b. Zähle, wie viele Geräte existieren
         //---------------------------------------------       
-        deviceCounter=arrLinkQualityDevices.length;
+        deviceCounter = arrLinkQualityDevices.length;
             //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
             if (deviceCounter == 0) { 
                 arrLinkQualityDevices.push({device: "--keine--", room: "", link_quality: ""})
@@ -178,7 +181,7 @@ function deviceWatchdog() {
     
         // 2c. Wie viele Geräte sind offline?
         //------------------------   
-        offlineDevicesCount=arrOfflineDevices.length;
+        offlineDevicesCount = arrOfflineDevices.length;
             //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
             if (offlineDevicesCount == 0) { 
                 arrOfflineDevices.push({device: "--keine--", room: "", lastContact: ""})
@@ -186,44 +189,49 @@ function deviceWatchdog() {
     
         // 3c. Wie viele Geräte sind batteriebetrieben?
         //------------------------   
-        batteryPoweredCount=arrBatteryPowered.length;
+        batteryPoweredCount = arrBatteryPowered.length;
             //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
             if (batteryPoweredCount == 0) { 
                 arrBatteryPowered.push({device: "--keine--", room: "", battery: ""})
             }
     
         // SETZE STATES
-        setState(stateDevicesCount, deviceCounter);
-        setState(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevices));
-        setState(stateDevicesOfflineCount, offlineDevicesCount);
-        setState(stateDevicesOffline, JSON.stringify(arrOfflineDevices));
-        setState(stateDevicesWithBatteryCount, batteryPoweredCount);
-        setState(stateDevicesWithBattery, JSON.stringify(arrBatteryPowered));
-        setState(stateDevicesInfoList, JSON.stringify(arrListAllDevices));
-        setState(stateDevicesLastCheck, [formatDate(new Date(), "DD.MM.YYYY"),' - ',formatDate(new Date(), "hh:mm:ss")].join(''));
+        await setStateAsync(stateDevicesCount, deviceCounter);
+        await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevices));
+        await setStateAsync(stateDevicesOfflineCount, offlineDevicesCount);
+        await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevices));
+        await setStateAsync(stateDevicesWithBatteryCount, batteryPoweredCount);
+        await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPowered));
+        await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevices));
+        await setStateAsync(stateDevicesLastCheck, [formatDate(new Date(), "DD.MM.YYYY"),' - ',formatDate(new Date(), "hh:mm:ss")].join(''));
 
         // Sende Benachrichtigungen falls sich die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung erhöht hat.
         if (sendOfflineMsg) {
+            let infotext = "";
             let offlineDevicesCountOld = getState(stateDevicesOfflineCount).val;
             if (offlineDevicesCount > offlineDevicesCountOld) {
-                let infotext = "Folgende " + offlineDevicesCount + " Geräte sind seit einiger Zeit nicht erreichbar: \n";
+                if (offlineDevicesCount == 1) {
+                    infotext = "Folgendes Gerät ist seit einiger Zeit nicht erreichbar: \n";
+                } else {
+                    infotext = "Folgende " + offlineDevicesCount + " Geräte sind seit einiger Zeit nicht erreichbar: \n";
+                }
                 for (const id of arrOfflineDevices) {
                     infotext = infotext + "\n" + id["device"] + " " + id["room"] + " (" + id["lastContact"] + ")";
-                }
+                };
                 log(infotext);
                 setState(watchdogLog, infotext);
                 if (sendJarvis) {
-                setState("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + offlineDevicesCount + ' Geräte sind nicht erreichbar","display": "drawer"}');
+                await setStateAsync("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + offlineDevicesCount + ' Geräte sind nicht erreichbar","display": "drawer"}');
                 };
                 if (sendPushover) {
-                    pushover("Batteriezustand: " + infotext)
-                }
+                    pushover("Watchdog Alarm: " + infotext)
+                };
                 if (sendTelegram) {
-                    telegram("Batteriezustand: " + infotext)
+                    telegram("Watchdog Alarm: " + infotext)
                 }
             }
         }
-}}
+}};
 
 //Telegram function
 async function telegram (msg) {
@@ -231,8 +239,8 @@ async function telegram (msg) {
         text: msg,
         user: userTelegram,
         parse_mode: 'HTML'
-    }); 
-}
+    })
+};
 
 //Pushover function
 async function pushover (msg) {
@@ -241,13 +249,13 @@ async function pushover (msg) {
         message: msg,
         device: devicePushover
     })
-}
+};
 
 async function checkBatterie () {
     if (sendBatterieMsg) {
         let weakCount = 0;
         let batteryData = JSON.parse(getState(stateDevicesWithBattery).val);
-        let infotext = "Status Batterien: \n";
+        let infotext = "";
         for (const id of batteryData) {
             let batteryValue = id["battery"].replace("%", "");
             if (batteryValue < batteryWarningMin) {
@@ -275,7 +283,7 @@ async function checkBatterie () {
         }
     }
 
-}
+};
 
 //Das Skript wird nach jeder vollen Stunde in der 6 minute ausgeführt
 schedule("6 */1 * * *", async function () {
@@ -295,8 +303,8 @@ setTimeout (async function () {
 //Script überprüft an vordefinierten Zeitpunkten den Batteriestand der Geräte und macht entsprechend Meldung, wenn der Batteriestatus unter x% fällt
 // Hinweis: 
 // Dies passiert 3x pro Woche
+if (sendBatterieMsg) {
     schedule('{"time":{"exactTime":true,"start":"12:50"},"period":{"days":1,"dows":"[2,4,6]"}}', async function () {
-        if (sendBatterieMsg) {
             await checkBatterie();
-        }
     })
+}
