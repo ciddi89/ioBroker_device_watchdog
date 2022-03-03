@@ -9,6 +9,12 @@ All other Devices (currently Ble, MQTT Xiaomi Antennas) are in beta.
 The Script can have bugs and isn't perfect. So feel free to open an issue or answer the topic in the forum, if you found something or if you've an improvement suggestion.
 
 ## Changelog:
+Version 0.0.3:
+- added rssi to percent calculation
+- added more async declarations
+- changed infotext
+- made some small corrections of the code
+
 Version 0.0.2:
 - added version number
 - changed Scriptname "Zigbee Watchdog" to "Device Watchdog"

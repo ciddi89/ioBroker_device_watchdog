@@ -7,7 +7,7 @@
 ** Last change on 02.03.2022
 */
 
-const watchDogVersion = '0.0.2';
+const watchDogVersion = '0.0.3';
 
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
