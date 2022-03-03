@@ -29,7 +29,7 @@ const titleJarvis   = 'WatchDog-Script'
 const sendBatterieMsg = true;
 
 //Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
-const sendBatterieMsgAtStart = true;
+const sendBatterieMsgAtStart = false;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
 const batteryWarningMin = 75;
@@ -134,7 +134,12 @@ async function deviceWatchdog() {
     
             // 1. Link-Qualität des Gerätes ermitteln
             //---------------------------------------
-            linkQuality=parseFloat((100/255 * getState(id).val).toFixed(2)) + "%"; // Linkqualität in % verwenden
+            linkQuality = "";
+            if (getState(id).val < 0) {
+                linkQuality = Math.min(Math.max(2 * (getState(id).val + 100), 0), 100) + "%";
+            } else {
+                linkQuality = parseFloat((100/255 * getState(id).val).toFixed(2)) + "%"; // Linkqualität in % verwenden
+            }
             //linkQuality=getState(id).val; // ALTERNATIV: Echt-Wert der Linkqualität (0-255) verwenden
             
             arrLinkQualityDevices.push({device: deviceName, adapter: adapterName, room: currRoom, link_quality: linkQuality})
