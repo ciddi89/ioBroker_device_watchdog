@@ -38,9 +38,11 @@ const batteryWarningMin = 75;
 const sendOfflineMsg = true;
 
 //Welche Geräte sollen überwacht werden?
-const watchZigbee       = true;     //Zigbee Adapter
-const watchBle          = true;     //Ble Adapter z.B. MiFlora Sensoren
+const watchZigbee       = true;     // Zigbee Adapter
+const watchBle          = true;     // Ble Adapter z.B. MiFlora Sensoren
 const watchMqttXiaomi   = false;    // MQTT Xiaomi Antenna
+
+const trueLinkQuality   = false;    // Soll der Echt-Wert der Linkqualität (0-255 oder RSSI-Wert) verwendet werde? true = Ja / false = Nein
 
 
 /*****************************************************************
@@ -135,13 +137,17 @@ async function deviceWatchdog() {
             // 1. Link-Qualität des Gerätes ermitteln
             //---------------------------------------
             linkQuality = "";
-            if (getState(id).val < 0) {
-                linkQuality = Math.min(Math.max(2 * (getState(id).val + 100), 0), 100) + "%";
-            } else {
-                linkQuality = parseFloat((100/255 * getState(id).val).toFixed(0)) + "%"; // Linkqualität in % verwenden
-            }
-            //linkQuality=getState(id).val; // ALTERNATIV: Echt-Wert der Linkqualität (0-255) verwenden
-            
+            if (trueLinkQuality) {
+                linkQuality = getState(id).val;
+            } 
+            else {
+                if (getState(id).val < 0) {
+                    linkQuality = Math.min(Math.max(2 * (getState(id).val + 100), 0), 100) + "%"; // Linkqualität von RSSI in % umrechnen
+                } else {
+                    linkQuality = parseFloat((100/255 * getState(id).val).toFixed(0)) + "%"; // Linkqualität in % verwenden
+                }
+            };
+
             arrLinkQualityDevices.push({device: deviceName, adapter: adapterName, room: currRoom, link_quality: linkQuality})
     
             // 2. Wann bestand letzter Kontakt zum Gerät
