@@ -14,6 +14,7 @@ Version 0.0.3:
 - added more async declarations
 - changed infotext
 - made some small corrections of the code
+- added option to choose the link quality
 
 Version 0.0.2:
 - added version number
