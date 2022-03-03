@@ -305,6 +305,6 @@ setTimeout (async function () {
 // Dies passiert 3x pro Woche
 if (sendBatterieMsg) {
     schedule('{"time":{"exactTime":true,"start":"12:50"},"period":{"days":1,"dows":"[2,4,6]"}}', async function () {
-            await checkBatterie();
+        await checkBatterie();
     })
 }
