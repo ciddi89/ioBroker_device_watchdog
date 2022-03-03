@@ -224,10 +224,10 @@ async function deviceWatchdog() {
                 await setStateAsync("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + offlineDevicesCount + ' Geräte sind nicht erreichbar","display": "drawer"}');
                 };
                 if (sendPushover) {
-                    pushover("Watchdog Alarm: " + infotext)
+                    await pushover("Watchdog Alarm: " + infotext)
                 };
                 if (sendTelegram) {
-                    telegram("Watchdog Alarm: " + infotext)
+                    await telegram("Watchdog Alarm: " + infotext)
                 }
             }
         }
@@ -271,10 +271,10 @@ async function checkBatterie () {
                 await setStateAsync("jarvis.0.addNotification", '{"title":"'+ titleJarvis +' (' + formatDate(new Date(), "DD.MM.YYYY - hh:mm:ss") + ')","message":" ' + weakCount + ' Geräte mit schwacher Batterie","display": "drawer"}'); 
             };
             if (sendPushover) {
-                pushover("Batteriezustand: " + infotext)
+                await pushover("Batteriezustand: " + infotext)
             }
             if (sendTelegram) {
-                telegram("Batteriezustand: " + infotext)
+                await telegram("Batteriezustand: " + infotext)
             }
 
         } 
