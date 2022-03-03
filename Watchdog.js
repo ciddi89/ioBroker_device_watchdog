@@ -138,7 +138,7 @@ async function deviceWatchdog() {
             if (getState(id).val < 0) {
                 linkQuality = Math.min(Math.max(2 * (getState(id).val + 100), 0), 100) + "%";
             } else {
-                linkQuality = parseFloat((100/255 * getState(id).val).toFixed(2)) + "%"; // Linkqualität in % verwenden
+                linkQuality = parseFloat((100/255 * getState(id).val).toFixed(0)) + "%"; // Linkqualität in % verwenden
             }
             //linkQuality=getState(id).val; // ALTERNATIV: Echt-Wert der Linkqualität (0-255) verwenden
             
