@@ -4,10 +4,10 @@
 ** Github Link: https://github.com/ciddi89/ioBroker_device_watchdog
 ** ioBroker Topiclink: https://forum.iobroker.net/topic/52108/zigbee-geräte-überwachen
 ** Thanks to JohannesA for the first work and great idea!
-** Last change on 03.03.2022
+** Last change on 02.03.2022
 */
 
-const watchDogVersion = '0.0.3';
+const watchDogVersion = '0.0.4';
 
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
@@ -217,7 +217,7 @@ async function deviceWatchdog() {
             if (offlineDevicesCount > offlineDevicesCountOld) {
                 if (offlineDevicesCount == 1) {
                     infotext = "Folgendes Gerät ist seit einiger Zeit nicht erreichbar: \n";
-                } else {
+                } else if (offlineDevicesCount >= 2) {
                     infotext = "Folgende " + offlineDevicesCount + " Geräte sind seit einiger Zeit nicht erreichbar: \n";
                 }
                 for (const id of arrOfflineDevices) {
