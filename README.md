@@ -10,6 +10,9 @@ The Script can have bugs and isn't perfect. If you found something or if you've 
 
 ## Changelog:
 Version 0.0.3:
+- changed that no message will be send if the state is changing that no devices are unreachable
+
+Version 0.0.3:
 - added rssi to percent calculation
 - added more async declarations
 - changed infotext
