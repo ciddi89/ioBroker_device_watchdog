@@ -4,7 +4,7 @@
 ** Github Link: https://github.com/ciddi89/ioBroker_device_watchdog
 ** ioBroker Topiclink: https://forum.iobroker.net/topic/52108/zigbee-geräte-überwachen
 ** Thanks to JohannesA for the first work and great idea!
-** Last change on 02.03.2022
+** Last change on 09.03.2022
 */
 
 const watchDogVersion = '0.0.4';
