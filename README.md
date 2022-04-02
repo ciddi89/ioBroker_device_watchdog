@@ -11,6 +11,7 @@ The Script can have bugs and isn't perfect. If you found something or if you've 
 ## Changelog:
 Version 0.0.6:
 - the array "keine" was counted as device. Changed it that zero devices are really count as zero.
+- changes standard battery warning from 70% to 30%
 
 Version 0.0.5:
 - added const to choose the pushover instanz
