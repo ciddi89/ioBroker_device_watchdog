@@ -30,10 +30,10 @@ const titleJarvis   = 'WatchDog-Script'
 const sendBatterieMsg = true;
 
 //Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
-const sendBatterieMsgAtStart = false;
+const sendBatterieMsgAtStart = true;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
-const batteryWarningMin = 75;
+const batteryWarningMin = 30;
 
 //Soll eine Meldung erfolgen falls die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung höher ist?
 const sendOfflineMsg = true;
