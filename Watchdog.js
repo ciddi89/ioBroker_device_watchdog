@@ -7,7 +7,7 @@
 ** Last change on 02.04.2022
 */
 
-const watchDogVersion = '0.0.5';
+const watchDogVersion = '0.0.6';
 
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
@@ -30,7 +30,7 @@ const titleJarvis   = 'WatchDog-Script'
 const sendBatterieMsg = true;
 
 //Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
-const sendBatterieMsgAtStart = true;
+const sendBatterieMsgAtStart = false;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
 const batteryWarningMin = 75;
@@ -85,11 +85,12 @@ async function doStates() {
 //Die Mainfunction.
 async function deviceWatchdog() {
  
-    let arrOfflineDevices       = []; //JSON-Info alle offline-Geräte
-    let arrLinkQualityDevices   = []; //JSON-Info alle offline-Geräte
-    let arrBatteryPowered       = []; //JSON-Info alle batteriebetriebenen Geräte
-    let arrListAllDevices       = []; //JSON-Info Gesamtliste mit Info je Gerät
-    
+    let arrOfflineDevices           = []; //JSON-Info alle offline-Geräte
+    let arrLinkQualityDevices       = []; //JSON-Info alle mit LinkQuality
+    let arrBatteryPowered           = []; //JSON-Info alle batteriebetriebenen Geräte
+    let arrListAllDevices           = []; //JSON-Info Gesamtliste mit Info je Gerät
+
+
     const myArrDev              = [];
     const myArrBlacklist        = [];
  
@@ -179,36 +180,47 @@ async function deviceWatchdog() {
         // 1b. Zähle, wie viele Geräte existieren
         //---------------------------------------------       
         let deviceCounter = arrLinkQualityDevices.length;
-            //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
-            if (deviceCounter == 0) { 
-                arrLinkQualityDevices.push({device: "--keine--", room: "", link_quality: ""})
-                arrListAllDevices.push({device: "--keine--", room: "", battery: "", lastContact: "", link_quality: ""});
-            }
     
         // 2c. Wie viele Geräte sind offline?
         //------------------------   
         let offlineDevicesCount = arrOfflineDevices.length;
-            //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
-            if (offlineDevicesCount == 0) { 
-                arrOfflineDevices.push({device: "--keine--", room: "", lastContact: ""})
-            }
     
         // 3c. Wie viele Geräte sind batteriebetrieben?
         //------------------------   
         let batteryPoweredCount = arrBatteryPowered.length;
-            //falls keine Geräte vorhanden sind, passe Datenpunkt-Inhalt der Geräte-Liste an
-            if (batteryPoweredCount == 0) { 
-                arrBatteryPowered.push({device: "--keine--", room: "", battery: ""})
-            }
-    
+
+        // Wenn keine Devices gezählt sind
+        let arrOfflineDevicesZero       = [{device: "--keine--", room: "", lastContact: ""}]; //JSON-Info alle offline-Geräte = 0
+        let arrLinkQualityDevicesZero   = [{device: "--keine--", room: "", link_quality: ""}]; //JSON-Info alle mit LinkQuality = 0
+        let arrBatteryPoweredZero       = [{device: "--keine--", room: "", battery: ""}]; //JSON-Info alle batteriebetriebenen Geräte
+        let arrListAllDevicesZero       = [{device: "--keine--", room: "", battery: "", lastContact: "", link_quality: ""}]; //JSON-Info Gesamtliste mit Info je Gerät
+
+
         // SETZE STATES
         await setStateAsync(stateDevicesCount, deviceCounter);
-        await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevices));
         await setStateAsync(stateDevicesOfflineCount, offlineDevicesCount);
-        await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevices));
         await setStateAsync(stateDevicesWithBatteryCount, batteryPoweredCount);
-        await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPowered));
-        await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevices));
+
+        if (deviceCounter == 0) {
+            await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevicesZero));
+            await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevicesZero));
+        } else {
+            await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevices));
+            await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevices));
+        };
+
+        if (offlineDevicesCount == 0) {
+            await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevicesZero));
+        } else {
+            await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevices));
+        };
+
+        if (batteryPoweredCount == 0) {
+            await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPoweredZero));  
+        } else {
+            await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPowered));
+        };
+
         await setStateAsync(stateDevicesLastCheck, [formatDate(new Date(), "DD.MM.YYYY"),' - ',formatDate(new Date(), "hh:mm:ss")].join(''));
 
         // Sende Benachrichtigungen falls sich die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung erhöht hat.
