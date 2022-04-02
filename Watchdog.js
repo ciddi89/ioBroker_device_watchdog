@@ -4,10 +4,10 @@
 ** Github Link: https://github.com/ciddi89/ioBroker_device_watchdog
 ** ioBroker Topiclink: https://forum.iobroker.net/topic/52108/zigbee-geräte-überwachen
 ** Thanks to JohannesA for the first work and great idea!
-** Last change on 09.03.2022
+** Last change on 02.04.2022
 */
 
-const watchDogVersion = '0.0.4';
+const watchDogVersion = '0.0.5';
 
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
@@ -17,9 +17,10 @@ const sendTelegram = false;                 //Soll per Telegram eine Nachricht g
 const userTelegram = '';                    //leer lassen falls jeder User eine Nachricht bekommen soll.
 
 //Für Pushover Benachrichtigung
-const sendPushover      = true;             //Soll per Pushover eine Nachricht gesendet werden? true = Ja / false = Nein
+const sendPushover      = true;                 //Soll per Pushover eine Nachricht gesendet werden? true = Ja / false = Nein
 const devicePushover    = 'All';
 const titelPushover     = 'ioBroker Watchdog';
+const pushoverInstanz   = 'pushover.0';         //Welche Instanz soll genutzt werden?
 
 //Für Jarvis Notification
 const sendJarvis    = false;                //Soll per Jarvis Notifications eine Nachricht gesendet werden? true = Ja / false = Nein
@@ -29,7 +30,7 @@ const titleJarvis   = 'WatchDog-Script'
 const sendBatterieMsg = true;
 
 //Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
-const sendBatterieMsgAtStart = false;
+const sendBatterieMsgAtStart = true;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
 const batteryWarningMin = 75;
@@ -249,7 +250,7 @@ async function telegram (msg) {
 
 //Pushover function
 async function pushover (msg) {
-    sendTo("pushover", {
+    sendTo(pushoverInstanz, {
         title: titelPushover,
         message: msg,
         device: devicePushover
