@@ -4,10 +4,10 @@
 ** Github Link: https://github.com/ciddi89/ioBroker_device_watchdog
 ** ioBroker Topiclink: https://forum.iobroker.net/topic/52108/zigbee-geräte-überwachen
 ** Thanks to JohannesA for the first work and great idea!
-** Last change on 02.04.2022
+** Last change on 03.04.2022
 */
 
-const watchDogVersion = '0.0.6';
+const watchDogVersion = '0.0.7';
 
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
@@ -178,7 +178,7 @@ async function deviceWatchdog() {
     
     
         // 1b. Zähle, wie viele Geräte existieren
-        //---------------------------------------------       
+        //------------------------  
         let deviceCounter = arrLinkQualityDevices.length;
     
         // 2c. Wie viele Geräte sind offline?
@@ -186,44 +186,19 @@ async function deviceWatchdog() {
         let offlineDevicesCount = arrOfflineDevices.length;
     
         // 3c. Wie viele Geräte sind batteriebetrieben?
-        //------------------------   
+        //------------------------  
         let batteryPoweredCount = arrBatteryPowered.length;
 
         // Wenn keine Devices gezählt sind
+        //------------------------  
         let arrOfflineDevicesZero       = [{device: "--keine--", room: "", lastContact: ""}]; //JSON-Info alle offline-Geräte = 0
         let arrLinkQualityDevicesZero   = [{device: "--keine--", room: "", link_quality: ""}]; //JSON-Info alle mit LinkQuality = 0
         let arrBatteryPoweredZero       = [{device: "--keine--", room: "", battery: ""}]; //JSON-Info alle batteriebetriebenen Geräte
         let arrListAllDevicesZero       = [{device: "--keine--", room: "", battery: "", lastContact: "", link_quality: ""}]; //JSON-Info Gesamtliste mit Info je Gerät
 
-
-        // SETZE STATES
-        await setStateAsync(stateDevicesCount, deviceCounter);
-        await setStateAsync(stateDevicesOfflineCount, offlineDevicesCount);
-        await setStateAsync(stateDevicesWithBatteryCount, batteryPoweredCount);
-
-        if (deviceCounter == 0) {
-            await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevicesZero));
-            await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevicesZero));
-        } else {
-            await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevices));
-            await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevices));
-        };
-
-        if (offlineDevicesCount == 0) {
-            await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevicesZero));
-        } else {
-            await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevices));
-        };
-
-        if (batteryPoweredCount == 0) {
-            await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPoweredZero));  
-        } else {
-            await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPowered));
-        };
-
-        await setStateAsync(stateDevicesLastCheck, [formatDate(new Date(), "DD.MM.YYYY"),' - ',formatDate(new Date(), "hh:mm:ss")].join(''));
-
+        
         // Sende Benachrichtigungen falls sich die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung erhöht hat.
+        //------------------------  
         if (sendOfflineMsg) {
             let infotext
             let offlineDevicesCountOld = getState(stateDevicesOfflineCount).val;
@@ -249,6 +224,34 @@ async function deviceWatchdog() {
                 }
             }
         }
+
+        // SETZE STATES
+        //------------------------  
+        await setStateAsync(stateDevicesCount, deviceCounter);
+        await setStateAsync(stateDevicesOfflineCount, offlineDevicesCount);
+        await setStateAsync(stateDevicesWithBatteryCount, batteryPoweredCount);
+
+        if (deviceCounter == 0) {
+            await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevicesZero));
+            await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevicesZero));
+        } else {
+            await setStateAsync(stateDevicesLinkQuality, JSON.stringify(arrLinkQualityDevices));
+            await setStateAsync(stateDevicesInfoList, JSON.stringify(arrListAllDevices));
+        };
+
+        if (offlineDevicesCount == 0) {
+            await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevicesZero));
+        } else {
+            await setStateAsync(stateDevicesOffline, JSON.stringify(arrOfflineDevices));
+        };
+
+        if (batteryPoweredCount == 0) {
+            await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPoweredZero));  
+        } else {
+            await setStateAsync(stateDevicesWithBattery, JSON.stringify(arrBatteryPowered));
+        };
+
+        await setStateAsync(stateDevicesLastCheck, [formatDate(new Date(), "DD.MM.YYYY"),' - ',formatDate(new Date(), "hh:mm:ss")].join(''));
 }};
 
 //Telegram function
@@ -269,6 +272,7 @@ async function pushover (msg) {
     })
 };
 
+//Check Batterie function
 async function checkBatterie () {
     if (sendBatterieMsg) {
         let weakCount = 0;
