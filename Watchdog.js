@@ -33,7 +33,7 @@ const sendBatterieMsg = true;
 const sendBatterieMsgAtStart = true;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
-const batteryWarningMin = 30;
+const batteryWarningMin = 35;
 
 //Soll eine Meldung erfolgen falls die Anzahl der "Offline-Geräte" im Vergleich zur letzten Prüfung höher ist?
 const sendOfflineMsg = true;
