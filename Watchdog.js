@@ -7,7 +7,7 @@
 ** Last change on 03.04.2022
 */
 
-const watchDogVersion = '0.0.7';
+const watchDogVersion = '0.0.8';
 
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
@@ -93,8 +93,7 @@ async function deviceWatchdog() {
     let arrBatteryPowered           = []; //JSON-Info alle batteriebetriebenen Geräte
     let arrListAllDevices           = []; //JSON-Info Gesamtliste mit Info je Gerät
 
-
-    const myArrDev              = [];
+    const myArrDev                  = []; //JSON mit Gesamtliste aller Geräte
  
     if (watchZigbee) {
         myArrDev.push({"theSelektor":"zigbee.0.*.link_quality","theName":"common","linkQual":"zigbee","batt":"zigbee"})
@@ -110,7 +109,9 @@ async function deviceWatchdog() {
     for(let x=0; x<myArrDev.length;x++) {
  
         var device = $(myArrDev[x].theSelektor);
+        
         device.each(function (id, i) {
+
             if (!myArrFilter.includes(id)) {
     
                 let currDeviceString    = id.slice(0, (id.lastIndexOf('.') + 1) - 1);
