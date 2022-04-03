@@ -9,6 +9,9 @@ All other Devices (currently Ble, MQTT Xiaomi Antennas) are in beta.
 The Script can have bugs and isn't perfect. If you found something or if you've an improvement suggestion, feel free to open an issue or answer the topic in the forum.
 
 ## Changelog:
+Version 0.0.8
+- Added filter to ignore specific devices
+
 Version 0.0.7
 - Fixed the issue that no message was send when there are more devices offline as last time
 
