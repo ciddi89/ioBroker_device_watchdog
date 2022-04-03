@@ -30,7 +30,7 @@ const titleJarvis   = 'WatchDog-Script'
 const sendBatterieMsg = true;
 
 //Soll bei Skript Neustart eine Meldung der Batteriestände gesendet werden?
-const sendBatterieMsgAtStart = true;
+const sendBatterieMsgAtStart = false;
 
 //Ab wieviel % Restbatterie soll eine Meldung erfolgen?
 const batteryWarningMin = 35;
@@ -48,6 +48,9 @@ const watchBle          = true;     // Ble Adapter z.B. MiFlora Sensoren
 const watchMqttXiaomi   = false;    // MQTT Xiaomi Antenna
 
 const trueLinkQuality   = false;    // Soll der Echt-Wert der Linkqualität (0-255 oder RSSI-Wert) verwendet werde? true = Ja / false = Nein
+
+//Welche Geräte sollen ignoriert werden? (Bsp.: 'zigbee.0.000000000045abad.link_quality', 'zigbee.0.00158d0006d69542.link_quality', 'ble.0.c4:7c:8d:6d:be:23.rssi')
+const myArrFilter       = [];
 
 
 /*****************************************************************
@@ -92,7 +95,6 @@ async function deviceWatchdog() {
 
 
     const myArrDev              = [];
-    const myArrBlacklist        = [];
  
     if (watchZigbee) {
         myArrDev.push({"theSelektor":"zigbee.0.*.link_quality","theName":"common","linkQual":"zigbee","batt":"zigbee"})
@@ -108,72 +110,73 @@ async function deviceWatchdog() {
     for(let x=0; x<myArrDev.length;x++) {
  
         var device = $(myArrDev[x].theSelektor);
- 
         device.each(function (id, i) {
+            if (!myArrFilter.includes(id)) {
     
-            let currDeviceString    = id.slice(0, (id.lastIndexOf('.') + 1) - 1);
-            let adapterName         = getObject(currDeviceString)._id[0].toUpperCase() + getObject(currDeviceString)._id.slice(1, (id.indexOf('.') + 1) - 1);
+                let currDeviceString    = id.slice(0, (id.lastIndexOf('.') + 1) - 1);
+                let adapterName         = getObject(currDeviceString)._id[0].toUpperCase() + getObject(currDeviceString)._id.slice(1, (id.indexOf('.') + 1) - 1);
 
-            //hier braucht man eine function, die den hostnamen findet:
-            let deviceName;
-            if (myArrDev[x].theName=="common")  deviceName=getObject(currDeviceString).common.name
-            if (myArrDev[x].theName=="dp") {
-                                        let ida=id.split('.');
-                                        let mySelect=$(ida[0]+'.'+ida[1]+'.'+ida[2]+'.*');
-                                        mySelect.each(function (ad, i) {
-                                            if (ad.includes(myArrDev[x].thedpName)) deviceName=getState(ad).val
-                                        });
-                                        }
+                //hier braucht man eine function, die den hostnamen findet:
+                let deviceName;
+                if (myArrDev[x].theName=="common")  deviceName=getObject(currDeviceString).common.name
+                if (myArrDev[x].theName=="dp") {
+                                            let ida=id.split('.');
+                                            let mySelect=$(ida[0]+'.'+ida[1]+'.'+ida[2]+'.*');
+                                            mySelect.each(function (ad, i) {
+                                                if (ad.includes(myArrDev[x].thedpName)) deviceName=getState(ad).val
+                                            });
+                                            }
 
-            let currRoom = getObject(id, 'rooms').enumNames[0];
-            if(typeof currRoom == 'object') currRoom = currRoom.de;
-                                        
-    
-            // 1. Link-Qualität des Gerätes ermitteln
-            //---------------------------------------
-            let linkQuality;
-            if (trueLinkQuality) {
-                linkQuality = getState(id).val;
-            } 
-            else {
-                if (getState(id).val < 0) {
-                    linkQuality = Math.min(Math.max(2 * (getState(id).val + 100), 0), 100) + "%"; // Linkqualität von RSSI in % umrechnen
-                } else {
-                    linkQuality = parseFloat((100/255 * getState(id).val).toFixed(0)) + "%"; // Linkqualität in % verwenden
-                }
-            };
-
-            arrLinkQualityDevices.push({device: deviceName, adapter: adapterName, room: currRoom, link_quality: linkQuality})
-    
-            // 2. Wann bestand letzter Kontakt zum Gerät
-            //------------------------      
-            let lastContact = Math.round((new Date() - new Date(getState(id).ts)) / 1000 / 60);
-            // 2b. wenn seit X Minuten kein Kontakt mehr besteht, nimm Gerät in Liste auf
-            //Rechne auf Tage um, wenn mehr als 48 Stunden seit letztem Kontakt vergangen sind
-            let lastContactString=Math.round(lastContact) + " Minuten";
-            if (Math.round(lastContact) > 100) {
-                lastContactString=Math.round(lastContact/60) + " Stunden";
-            } 
-            if (Math.round(lastContact/60) > 48) {
-                lastContactString=Math.round(lastContact/60/24) + " Tagen";
-            } 
-            if (lastContact > maxMinutes) {
-                arrOfflineDevices.push({device: deviceName, adapter: adapterName, room: currRoom, lastContact: lastContactString});
-            }
-    
-            // 3. Batteriestatus abfragen
-            let batteryHealth;
-            let currDeviceBatteryString = currDeviceString + ".battery";
-            if (existsState(currDeviceBatteryString)) {
-                batteryHealth = getState(currDeviceBatteryString).val + "%"; // Batteriestatus in %
-                arrBatteryPowered.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth});
-            } 
-            else {
-                batteryHealth = "-";
-            }
+                let currRoom = getObject(id, 'rooms').enumNames[0];
+                if(typeof currRoom == 'object') currRoom = currRoom.de;
+                                            
         
-            arrListAllDevices.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth, lastContact: lastContactString, link_quality: linkQuality});
-    
+                // 1. Link-Qualität des Gerätes ermitteln
+                //---------------------------------------
+                let linkQuality;
+                if (trueLinkQuality) {
+                    linkQuality = getState(id).val;
+                } 
+                else {
+                    if (getState(id).val < 0) {
+                        linkQuality = Math.min(Math.max(2 * (getState(id).val + 100), 0), 100) + "%"; // Linkqualität von RSSI in % umrechnen
+                    } else {
+                        linkQuality = parseFloat((100/255 * getState(id).val).toFixed(0)) + "%"; // Linkqualität in % verwenden
+                    }
+                };
+
+                arrLinkQualityDevices.push({device: deviceName, adapter: adapterName, room: currRoom, link_quality: linkQuality})
+        
+                // 2. Wann bestand letzter Kontakt zum Gerät
+                //------------------------      
+                let lastContact = Math.round((new Date() - new Date(getState(id).ts)) / 1000 / 60);
+                // 2b. wenn seit X Minuten kein Kontakt mehr besteht, nimm Gerät in Liste auf
+                //Rechne auf Tage um, wenn mehr als 48 Stunden seit letztem Kontakt vergangen sind
+                let lastContactString=Math.round(lastContact) + " Minuten";
+                if (Math.round(lastContact) > 100) {
+                    lastContactString=Math.round(lastContact/60) + " Stunden";
+                } 
+                if (Math.round(lastContact/60) > 48) {
+                    lastContactString=Math.round(lastContact/60/24) + " Tagen";
+                } 
+                if (lastContact > maxMinutes) {
+                    arrOfflineDevices.push({device: deviceName, adapter: adapterName, room: currRoom, lastContact: lastContactString});
+                }
+        
+                // 3. Batteriestatus abfragen
+                let batteryHealth;
+                let currDeviceBatteryString = currDeviceString + ".battery";
+                if (existsState(currDeviceBatteryString)) {
+                    batteryHealth = getState(currDeviceBatteryString).val + "%"; // Batteriestatus in %
+                    arrBatteryPowered.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth});
+                } 
+                else {
+                    batteryHealth = "-";
+                }
+            
+                arrListAllDevices.push({device: deviceName, adapter: adapterName, room: currRoom, battery: batteryHealth, lastContact: lastContactString, link_quality: linkQuality});
+        
+            }   
         });
     
     
