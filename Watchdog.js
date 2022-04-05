@@ -4,10 +4,10 @@
 ** Github Link: https://github.com/ciddi89/ioBroker_device_watchdog
 ** ioBroker Topiclink: https://forum.iobroker.net/topic/52108/zigbee-geräte-überwachen
 ** Thanks to JohannesA for the first work and great idea!
-** Last change on 03.04.2022
+** Last change on 05.04.2022
 */
 
-const watchDogVersion = '0.0.8';
+const watchDogVersion = '0.0.9';
 
 //Hauptpfad wo die Datenpunkte gespeichert werden sollen. Kann bei Bedarf angepasst werden.
 const basePath = "0_userdata.0.Datenpunkte.DeviceWatchdog.";
@@ -46,6 +46,7 @@ const maxMinutes = 300;
 const watchZigbee       = true;     // Zigbee Adapter
 const watchBle          = true;     // Ble Adapter z.B. MiFlora Sensoren
 const watchMqttXiaomi   = false;    // MQTT Xiaomi Antenna
+const watchMiHome       = false;    // MiHome Devices
 
 const trueLinkQuality   = false;    // Soll der Echt-Wert der Linkqualität (0-255 oder RSSI-Wert) verwendet werde? true = Ja / false = Nein
 
@@ -96,15 +97,19 @@ async function deviceWatchdog() {
     const myArrDev                  = []; //JSON mit Gesamtliste aller Geräte
  
     if (watchZigbee) {
-        myArrDev.push({"theSelektor":"zigbee.0.*.link_quality","theName":"common","linkQual":"zigbee","batt":"zigbee"})
+        myArrDev.push({"theSelektor":"zigbee.0.*.link_quality","theName":"common"})
     }
     if (watchBle) {
-        myArrDev.push({"theSelektor":"ble.0.*.rssi","theName":"common","linkQual":"ble","batt":"none"})
+        myArrDev.push({"theSelektor":"ble.0.*.rssi","theName":"common"})
     }
     if (watchMqttXiaomi) {
         myArrDev.push({"theSelektor":"mqtt.0.xiaomiantenna.*.status","theName":"Objectname2Level","linkQual":"none","batt":"none"})
         myArrDev.push({"theSelektor":"mqtt.0.xiaomiantenna.sensors.sensor.*_batt.state","theName":"Objectname1Level","linkQual":"none","batt":"dpvalue"})
     }
+    if (watchMiHome) {
+        myArrDev.push({"theSelektor":"mihome.0.devices.*.percent","theName":"common"})
+    }
+
 
     for(let x=0; x<myArrDev.length;x++) {
  
